@@ -1,0 +1,23 @@
+{
+  "name": "kids-ecom",
+  "version": "1.0.0",
+  "description": "Full-stack Kids E-Commerce Platform with Next.js frontend and CodeIgniter 4 backend",
+  "private": true,
+  "scripts": {
+    "frontend:dev": "cd kids_ecom_nextjs && npm run dev",
+    "frontend:build": "cd kids_ecom_nextjs && npm run build",
+    "frontend:start": "cd kids_ecom_nextjs && npm run start",
+    "backend:serve": "cd backend && php spark serve --port 8081",
+    "backend:migrate": "cd backend && php spark migrate",
+    "backend:status": "cd backend && php spark migrate:status"
+  },
+  "keywords": [
+    "ecommerce",
+    "nextjs",
+    "codeigniter4",
+    "react",
+    "kids-fashion"
+  ],
+  "author": "sahilzivaan",
+  "license": "ISC"
+}
