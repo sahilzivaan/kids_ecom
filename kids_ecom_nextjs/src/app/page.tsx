@@ -579,21 +579,19 @@ export default function HomePage() {
 
       {/* ═══════════ RECENTLY VIEWED ═══════════ */}
       {recentlyViewed.length > 0 && (
-        <section style={{ padding: '40px 0', background: 'var(--bg)' }} aria-labelledby="recently-viewed-title">
+        <section style={{ padding: '48px 0', background: 'var(--bg)' }} aria-labelledby="recently-viewed-title">
           <div className="container">
-            <div className="section-header">
-              <div>
-                <span className="section-label">Your History</span>
-                <h2 className="section-title" id="recently-viewed-title">Recently Viewed</h2>
-              </div>
+            <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+              <span className="section-label">Your History</span>
+              <h2 className="section-title" id="recently-viewed-title">Recently Viewed</h2>
             </div>
-            <div style={{ display: 'flex', gap: '20px', overflowX: 'auto', paddingBottom: '12px', scrollbarWidth: 'thin' }}>
+            <div style={{ display: 'flex', gap: '20px', justifyContent: 'center', flexWrap: 'wrap', paddingBottom: '12px' }}>
               {recentlyViewed.map(p => {
                 const imgStr = (p.images && p.images.length > 0) ? (p.images.find((i:any) => i.is_primary)?.image_url || p.images[0].image_url) : (p.img || '/images/product_placeholder.jpg');
                 const src = getImageUrl(imgStr, 'thumb');
                 return (
-                  <a key={p.id} href={`/product?id=${p.id}`} style={{ textDecoration: 'none', flexShrink: 0, width: '160px' }}>
-                    <div style={{ width: '160px', height: '200px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border)', marginBottom: '10px' }}>
+                  <a key={p.id} href={`/product?id=${p.id}`} style={{ textDecoration: 'none', flexShrink: 0, width: '160px', textAlign: 'center' }}>
+                    <div style={{ width: '160px', height: '200px', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border)', marginBottom: '10px', background: '#fff' }}>
                       <img src={src} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.3s' }}
                         onMouseEnter={e => (e.currentTarget as HTMLImageElement).style.transform = 'scale(1.05)'}
                         onMouseLeave={e => (e.currentTarget as HTMLImageElement).style.transform = ''}
