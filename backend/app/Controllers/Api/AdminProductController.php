@@ -52,8 +52,8 @@ class AdminProductController extends BaseController
         $productId = $model->getInsertID();
         $data['id'] = $productId;
 
+        $imageModel = new \App\Models\ProductImageModel();
         if (isset($input['images']) && is_array($input['images'])) {
-            $imageModel = new \App\Models\ProductImageModel();
             foreach ($input['images'] as $idx => $img) {
                 $imageModel->insert([
                     'product_id' => $productId,
@@ -63,9 +63,10 @@ class AdminProductController extends BaseController
                 ]);
             }
         }
+        $data['images'] = $imageModel->where('product_id', $productId)->orderBy('display_order', 'ASC')->findAll();
 
+        $variantModel = new \App\Models\ProductVariantModel();
         if (isset($input['variants']) && is_array($input['variants'])) {
-            $variantModel = new \App\Models\ProductVariantModel();
             foreach ($input['variants'] as $v) {
                 $variantModel->insert([
                     'product_id' => $productId,
@@ -79,6 +80,7 @@ class AdminProductController extends BaseController
                 ]);
             }
         }
+        $data['variants'] = $variantModel->where('product_id', $productId)->findAll();
 
         return $this->response->setStatusCode(201)->setJSON([
             'message' => 'Product created successfully',
@@ -110,8 +112,8 @@ class AdminProductController extends BaseController
             $model->update($id, $data);
         }
 
+        $imageModel = new \App\Models\ProductImageModel();
         if (isset($input['images']) && is_array($input['images'])) {
-            $imageModel = new \App\Models\ProductImageModel();
             $imageModel->where('product_id', $id)->delete();
             foreach ($input['images'] as $idx => $img) {
                 $imageModel->insert([
@@ -123,8 +125,8 @@ class AdminProductController extends BaseController
             }
         }
 
+        $variantModel = new \App\Models\ProductVariantModel();
         if (isset($input['variants']) && is_array($input['variants'])) {
-            $variantModel = new \App\Models\ProductVariantModel();
             $variantModel->where('product_id', $id)->delete();
             foreach ($input['variants'] as $v) {
                 $variantModel->insert([
@@ -140,8 +142,13 @@ class AdminProductController extends BaseController
             }
         }
 
+        $updatedProduct = $model->find($id);
+        $updatedProduct['images'] = $imageModel->where('product_id', $id)->orderBy('display_order', 'ASC')->findAll();
+        $updatedProduct['variants'] = $variantModel->where('product_id', $id)->findAll();
+
         return $this->response->setJSON([
-            'message' => 'Product updated successfully'
+            'message' => 'Product updated successfully',
+            'product' => $updatedProduct
         ]);
     }
 

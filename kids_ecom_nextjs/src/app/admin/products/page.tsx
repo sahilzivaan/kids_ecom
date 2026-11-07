@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import AdminTable, { Column } from '@/components/admin/AdminTable';
 import Modal from '@/components/admin/Modal';
 import { useToast } from '@/components/admin/Toast';
@@ -121,32 +121,33 @@ export default function ProductsPage() {
   const [generateColors, setGenerateColors] = useState('');
   const [generateSizes, setGenerateSizes] = useState('');
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const res = await fetchWithAuth('/products');
-        if (res.ok) {
-          const json = await res.json();
-          setData(json.products || []);
-        }
-      } catch (err) {
-        setData([]);
+  const fetchProducts = useCallback(async () => {
+    try {
+      const res = await fetchWithAuth('/products');
+      if (res.ok) {
+        const json = await res.json();
+        setData(json.products || []);
       }
-    };
-    const fetchCategories = async () => {
-      try {
-        const res = await fetchWithAuth('/categories');
-        if (res.ok) {
-          const json = await res.json();
-          setCategories(json.categories || []);
-        }
-      } catch (err) {
-        setCategories([]);
-      }
-    };
-    
-    Promise.all([fetchProducts(), fetchCategories()]).finally(() => setLoading(false));
+    } catch (err) {
+      setData([]);
+    }
   }, []);
+
+  const fetchCategories = useCallback(async () => {
+    try {
+      const res = await fetchWithAuth('/categories');
+      if (res.ok) {
+        const json = await res.json();
+        setCategories(json.categories || []);
+      }
+    } catch (err) {
+      setCategories([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    Promise.all([fetchProducts(), fetchCategories()]).finally(() => setLoading(false));
+  }, [fetchProducts, fetchCategories]);
 
   const columns: Column[] = [
     { key: 'checkbox', label: '', sortable: false, className: 'no-sort' },
@@ -191,17 +192,9 @@ export default function ProductsPage() {
       });
       
       if (res.ok) {
-        const savedProduct = await res.json();
-        if (formData.id) {
-          setData(prev => prev.map(p => p.id === formData.id ? { ...p, ...formData } : p));
-          showToast('Product updated successfully!', 'info');
-        } else {
-          // If the backend doesn't return the full object, at least add it locally
-          const newProduct = savedProduct.product ? savedProduct.product : { ...formData, id: savedProduct.id || Date.now() };
-          setData(prev => [...prev, newProduct]);
-          showToast('Product added successfully!', 'success');
-        }
+        showToast(formData.id ? 'Product updated successfully!' : 'Product added successfully!', 'success');
         setModalOpen(false);
+        await fetchProducts();
       } else {
         showToast('Failed to save product.', 'error');
       }
@@ -384,6 +377,15 @@ export default function ProductsPage() {
     return <span className="badge b-success">{stock} in stock</span>;
   };
 
+  const getProductThumbnail = (row: any) => {
+    if (!row) return '';
+    if (row.images && Array.isArray(row.images) && row.images.length > 0) {
+      const primary = row.images.find((i: any) => Number(i.is_primary) === 1 || i.is_primary === true || i.is_primary === '1') || row.images[0];
+      return primary?.image_url || primary?.url || primary?.file_url || '';
+    }
+    return row.img || row.image_url || row.image || '';
+  };
+
   const renderRow = (row: any, i: number) => {
     const statusCls = row.status === 'Active' ? 'b-success' : 'b-muted';
     return (
@@ -404,8 +406,22 @@ export default function ProductsPage() {
         <td>
           <div className="prod-thumb">
             {(() => {
-              const img = (row.images && row.images.length > 0) ? (row.images.find((i:any) => i.is_primary)?.image_url || row.images[0].image_url) : '';
-              return <img src={getImageUrl(img, 'thumb')} alt="Product" style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px' }} />;
+              const img = getProductThumbnail(row);
+              return (
+                <img 
+                  src={getImageUrl(img, 'thumb')} 
+                  alt={row.name || 'Product'} 
+                  onError={(e) => {
+                    const target = e.currentTarget as HTMLImageElement;
+                    if (img && !target.src.includes('uploads/originals')) {
+                      target.src = getImageUrl(img, 'original');
+                    } else {
+                      target.src = '/images/product_placeholder.jpg';
+                    }
+                  }}
+                  style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px' }} 
+                />
+              );
             })()}
           </div>
         </td>
