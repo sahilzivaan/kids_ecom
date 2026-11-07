@@ -360,12 +360,18 @@ function ProductContent() {
           align-items: start;
           min-width: 0;
           width: 100%;
+          position: sticky;
+          top: 90px;
+          align-self: start;
+        }
+        .product-gallery.no-thumbs {
+          grid-template-columns: 1fr;
         }
         .gallery-thumbnails { 
           display: flex; 
           flex-direction: column; 
           gap: 10px; 
-          max-height: 520px; 
+          max-height: calc(100vh - 120px); 
           overflow-y: auto; 
           scrollbar-width: none; 
         }
@@ -387,6 +393,7 @@ function ProductContent() {
           position: relative; 
           width: 100%; 
           aspect-ratio: 4/5; 
+          max-height: calc(100vh - 120px);
           background: #fff; 
           border-radius: var(--radius-md); 
           overflow: hidden; 
@@ -457,6 +464,7 @@ function ProductContent() {
 
         @media (max-width: 900px) {
           .product-page-layout { grid-template-columns: 1fr; gap: 28px; }
+          .product-gallery { position: static; top: auto; }
         }
         @media (max-width: 680px) {
           .product-gallery { display: flex; flex-direction: column; width: 100%; }
@@ -527,23 +535,25 @@ function ProductContent() {
 
             <div className="product-page-layout">
               {/* Gallery Section */}
-              <div className="product-gallery">
-                <div className="gallery-thumbnails">
-                  {images.map((img: string, i: number) => (
-                    <button
-                      key={i}
-                      className={`thumbnail-btn${activeImg === i ? ' active' : ''}`}
-                      onClick={() => setActiveImg(i)}
-                      aria-label={`View image ${i + 1}`}
-                    >
-                      <img
-                        src={getImageUrl(img, 'thumb')}
-                        alt={`${product.name} view ${i + 1}`}
-                        style={{ objectFit: 'cover', width: '100%', height: '100%' }}
-                      />
-                    </button>
-                  ))}
-                </div>
+              <div className={`product-gallery${images.length <= 1 ? ' no-thumbs' : ''}`}>
+                {images.length > 1 && (
+                  <div className="gallery-thumbnails">
+                    {images.map((img: string, i: number) => (
+                      <button
+                        key={i}
+                        className={`thumbnail-btn${activeImg === i ? ' active' : ''}`}
+                        onClick={() => setActiveImg(i)}
+                        aria-label={`View image ${i + 1}`}
+                      >
+                        <img
+                          src={getImageUrl(img, 'thumb')}
+                          alt={`${product.name} view ${i + 1}`}
+                          style={{ objectFit: 'cover', width: '100%', height: '100%' }}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                )}
                 <div className="gallery-main">
                   <img
                     src={getImageUrl(images[activeImg] || images[0], 'optimized')}
