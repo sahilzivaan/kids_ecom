@@ -47,7 +47,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         const baseUrl = API_BASE_URL;
         const res = await fetch(`${baseUrl}/auth/me`, {
           headers: {
-            'Authorization': `Bearer ${token}`
+            'Authorization': `Bearer ${token}`,
+            'bypass-tunnel-reminder': 'true'
           }
         });
         

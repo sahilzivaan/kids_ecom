@@ -19,7 +19,10 @@ export default function LoginPage() {
     try {
       const res = await fetch(`${API_BASE_URL}/auth/admin-login`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'bypass-tunnel-reminder': 'true'
+        },
         body: JSON.stringify({ email, password })
       });
       const data = await res.json();
