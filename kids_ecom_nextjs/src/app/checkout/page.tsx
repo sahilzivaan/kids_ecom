@@ -29,6 +29,12 @@ export default function CheckoutPage() {
   const [couponApplied, setCouponApplied] = useState(false);
 
   useEffect(() => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    if (!token) {
+      window.location.href = '/signin?redirect=/checkout';
+      return;
+    }
+
     const fetchCartAndUser = async () => {
       try {
         const userRes = await fetchCustomerAuth('/auth/me');
@@ -52,8 +58,12 @@ export default function CheckoutPage() {
           const data = await res.json();
           setCartItems(data.cart || []);
         }
-      } catch (err) {
-        console.error(err);
+      } catch (err: any) {
+        if (err.message === 'Session Expired') {
+          window.location.href = '/signin?redirect=/checkout';
+        } else {
+          console.error(err);
+        }
       } finally {
         setLoading(false);
       }

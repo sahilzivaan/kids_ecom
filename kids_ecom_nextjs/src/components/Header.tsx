@@ -40,8 +40,7 @@ export default function Header() {
               setWishlistCount(0);
             }
           })
-          .catch(() => setWishlistCount(0));
-      } else {
+          .catch(() => setWishlistCount(0));      } else {
         setCartCount(0);
         setWishlistCount(0);
       }
@@ -57,14 +56,19 @@ export default function Header() {
       refreshCounts();
     };
 
+    // Listen to storage events only for token changes (cross-tab login/logout)
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'token') refreshCounts();
+    };
+
     window.addEventListener('cart_updated', handleCartUpdate);
     window.addEventListener('wishlist_updated', handleWishlistUpdate);
-    window.addEventListener('storage', refreshCounts);
+    window.addEventListener('storage', handleStorage);
     
     return () => {
       window.removeEventListener('cart_updated', handleCartUpdate);
       window.removeEventListener('wishlist_updated', handleWishlistUpdate);
-      window.removeEventListener('storage', refreshCounts);
+      window.removeEventListener('storage', handleStorage);
     };
   }, [pathname]);
 

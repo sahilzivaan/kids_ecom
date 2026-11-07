@@ -43,12 +43,15 @@ export const fetchPublic = async (url: string, options: RequestInit = {}) => {
 export const fetchCustomerAuth = async (url: string, options: RequestInit = {}) => {
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
   const baseUrl = API_BASE_URL;
-  
+
+  // If no token exists at all, throw without redirecting — the calling page decides what to do
+  if (!token) {
+    throw new Error('Unauthorized');
+  }
+
   const headers = new Headers(options.headers || {});
   headers.set('Content-Type', 'application/json');
-  if (token) {
-    headers.set('Authorization', `Bearer ${token}`);
-  }
+  headers.set('Authorization', `Bearer ${token}`);
 
   const res = await fetch(`${baseUrl}${url}`, {
     ...options,
@@ -59,12 +62,6 @@ export const fetchCustomerAuth = async (url: string, options: RequestInit = {}) 
     if (typeof window !== 'undefined') {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      const currentPath = window.location.pathname + window.location.search;
-      if (currentPath && !currentPath.startsWith('/signin')) {
-        window.location.href = `/signin?redirect=${encodeURIComponent(currentPath)}`;
-      } else {
-        window.location.href = '/signin';
-      }
     }
     throw new Error('Session Expired');
   }

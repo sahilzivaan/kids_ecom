@@ -138,10 +138,9 @@ export default function ShopClient() {
     })
     .catch(err => {
       if (err.message === 'Session Expired' || err.message === 'Unauthorized') {
-        window.location.href = '/signin';
+        toast.error('Please login to add to wishlist');
       } else {
         toast.error('Please login to add to wishlist');
-        window.location.href = '/signin';
       }
     });
   };

@@ -26,7 +26,9 @@ export default function WishlistPage() {
       .then(data => {
         if (data.products) setItems(data.products);
       })
-      .catch(console.error)
+      .catch(err => {
+      if (err.message !== 'Unauthorized') console.error(err);
+    })
       .finally(() => setLoading(false));
   };
 
@@ -40,7 +42,9 @@ export default function WishlistPage() {
       setItems(prev => prev.filter(i => i.id !== id));
       window.dispatchEvent(new Event('wishlist_updated'));
     })
-    .catch(console.error);
+    .catch(err => {
+      if (err.message !== 'Unauthorized') console.error(err);
+    });
   };
 
   const moveToCart = async (item: any) => {

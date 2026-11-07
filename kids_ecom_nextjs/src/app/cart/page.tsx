@@ -26,6 +26,9 @@ export default function CartPage() {
 
 
   useEffect(() => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    if (!token) return; // Not logged in — show empty cart, no redirect loop
+
     fetchCustomerAuth('/cart')
       .then(res => res.json())
       .then(data => {
@@ -50,7 +53,12 @@ export default function CartPage() {
           setItems(formatted);
         }
       })
-      .catch(console.error);
+      .catch(err => {
+        if (err.message === 'Session Expired' || err.message === 'Unauthorized') {
+          // Token expired — clear items but don't loop-redirect
+          setItems([]);
+        }
+      });
   }, []);
 
   const updateQty = async (id: number, delta: number) => {
