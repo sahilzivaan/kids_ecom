@@ -35,6 +35,7 @@ class Cors extends BaseConfig
          *   - ['https://www.example.com']
          */
         'allowedOrigins' => [
+            'https://kidsecomnextjs.vercel.app',
             'http://localhost:3000',
             'http://localhost:3001',
             'http://localhost:3002',
@@ -59,6 +60,7 @@ class Cors extends BaseConfig
          *   - ['https://\w+\.example\.com']
          */
         'allowedOriginsPatterns' => [
+            'https?://.*\.vercel\.app',
             'https?://localhost(:\d+)?',
             'https?://127\.0\.0\.1(:\d+)?',
         ],

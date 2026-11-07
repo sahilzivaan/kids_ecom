@@ -6,6 +6,7 @@ export const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
   
   const headers = new Headers(options.headers || {});
   headers.set('Content-Type', 'application/json');
+  headers.set('bypass-tunnel-reminder', 'true');
   if (token) {
     headers.set('Authorization', `Bearer ${token}`);
   }
@@ -31,6 +32,7 @@ export const fetchPublic = async (url: string, options: RequestInit = {}) => {
   const baseUrl = API_BASE_URL;
   const headers = new Headers(options.headers || {});
   headers.set('Content-Type', 'application/json');
+  headers.set('bypass-tunnel-reminder', 'true');
 
   const res = await fetch(`${baseUrl}${url}`, {
     ...options,
@@ -51,6 +53,7 @@ export const fetchCustomerAuth = async (url: string, options: RequestInit = {}) 
 
   const headers = new Headers(options.headers || {});
   headers.set('Content-Type', 'application/json');
+  headers.set('bypass-tunnel-reminder', 'true');
   headers.set('Authorization', `Bearer ${token}`);
 
   const res = await fetch(`${baseUrl}${url}`, {
