@@ -178,6 +178,7 @@ export default function CheckoutPage() {
         setOrderId(data.order.order_number);
         setPlaced(true);
         sessionStorage.removeItem('applied_coupon');
+        window.dispatchEvent(new Event('cart_updated'));
       } else {
 
         toast.error('Failed to place order. Please try again.');
@@ -206,7 +207,7 @@ export default function CheckoutPage() {
           <p style={{ fontSize: '16px', color: 'var(--text-muted)', marginBottom: '8px' }}>Your order <strong>{orderId}</strong> has been placed successfully.</p>
           <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '32px' }}>Expected delivery: 3–5 business days</p>
           <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <Link href="/track" className="btn-primary accent-btn">Track Order</Link>
+            <Link href={`/track?id=${encodeURIComponent(orderId)}`} className="btn-primary accent-btn">Track Order</Link>
             <Link href="/shop" className="btn-outline">Continue Shopping</Link>
           </div>
         </div>

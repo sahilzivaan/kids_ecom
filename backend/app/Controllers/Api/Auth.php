@@ -151,10 +151,17 @@ class Auth extends ResourceController
         }
         
         $users = auth()->getProvider();
+        $email = trim(strtolower($this->request->getVar('email') ?? ''));
+
+        // Check if user already exists
+        $existing = $users->findByCredentials(['email' => $email]);
+        if ($existing) {
+            return $this->fail('An account with this email already exists.', 400);
+        }
 
         $user = new User([
             'username'   => strtolower($this->request->getVar('first_name')) . time(),
-            'email'      => $this->request->getVar('email'),
+            'email'      => $email,
             'password'   => $this->request->getVar('password'),
             'first_name' => $this->request->getVar('first_name'),
             'last_name'  => $this->request->getVar('last_name'),

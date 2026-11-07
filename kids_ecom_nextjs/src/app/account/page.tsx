@@ -341,7 +341,7 @@ export default function AccountPage() {
                             <div className="order-date">{formatDate(o.created_at)}</div>
                             <div className="order-amount">{o.total_amount}</div>
                             <span className={`order-status status-${o.status.toLowerCase()}`}>{o.status}</span>
-                            <Link href="/track" className="btn-track">Track</Link>
+                            <Link href={`/track?id=${encodeURIComponent(o.order_number)}`} className="btn-track">Track</Link>
                           </div>
                         ))
                       )}

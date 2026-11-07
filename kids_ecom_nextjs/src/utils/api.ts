@@ -59,7 +59,12 @@ export const fetchCustomerAuth = async (url: string, options: RequestInit = {}) 
     if (typeof window !== 'undefined') {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      window.location.href = '/signin';
+      const currentPath = window.location.pathname + window.location.search;
+      if (currentPath && !currentPath.startsWith('/signin')) {
+        window.location.href = `/signin?redirect=${encodeURIComponent(currentPath)}`;
+      } else {
+        window.location.href = '/signin';
+      }
     }
     throw new Error('Session Expired');
   }

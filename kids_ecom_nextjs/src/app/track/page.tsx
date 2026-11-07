@@ -1,24 +1,27 @@
 'use client';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useState } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { fetchPublic } from '@/utils/api';
 import { getImageUrl } from '@/utils/image';
 import { toast } from '@/utils/toast';
 import { formatDate, formatDateTime } from '@/utils/date';
 
-export default function TrackPage() {
+function TrackContent() {
+  const searchParams = useSearchParams();
+  const queryId = searchParams.get('id') || searchParams.get('order') || '';
   const [orderId, setOrderId] = useState('');
   const [loading, setLoading] = useState(false);
   const [orderData, setOrderData] = useState<any>(null);
 
-  const trackOrder = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!orderId.trim()) return;
+  const performTrack = (targetId: string) => {
+    const trimmed = targetId.trim();
+    if (!trimmed) return;
     setLoading(true);
     setOrderData(null);
     
-    fetchPublic(`/track/${encodeURIComponent(orderId.trim())}`)
+    fetchPublic(`/track/${encodeURIComponent(trimmed)}`)
       .then(res => res.ok ? res.json() : null)
       .then(data => {
         setLoading(false);
@@ -36,6 +39,18 @@ export default function TrackPage() {
         setLoading(false);
         toast.error('An error occurred while tracking the order.');
       });
+  };
+
+  useEffect(() => {
+    if (queryId) {
+      setOrderId(queryId);
+      performTrack(queryId);
+    }
+  }, [queryId]);
+
+  const trackOrder = (e: React.FormEvent) => {
+    e.preventDefault();
+    performTrack(orderId);
   };
 
   const getTimeline = (status: string, createdAt: string, updatedAt: string) => {
@@ -99,6 +114,7 @@ export default function TrackPage() {
         .track-order-info { background: #fff; border-radius: var(--radius-md); border: 1px solid var(--border); padding: 28px; margin-bottom: 20px; box-shadow: var(--shadow-sm); }
         .track-order-meta { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; margin-bottom: 24px; }
         .track-order-id { font-family: var(--font-serif); font-size: 22px; font-weight: 700; color: var(--text-heading); }
+        .track-tracking-id { font-size: 13px; color: var(--primary); font-weight: 600; margin-top: 2px; }
         .track-order-date { font-size: 13px; color: var(--text-muted); margin-top: 3px; }
         .track-status-badge { padding: 8px 18px; border-radius: var(--radius-full); font-size: 12px; font-weight: 700; letter-spacing: 0.5px; background: #EEF4FF; color: #3B82F6; }
         .track-status-badge.cancelled { background: #FEE2E2; color: #EF4444; }
@@ -155,7 +171,7 @@ export default function TrackPage() {
         <div className="container">
           <span className="section-label">Delivery Updates</span>
           <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(26px,4vw,40px)', color: 'var(--text-heading)', marginBottom: '6px' }}>Track Your Order</h1>
-          <p style={{ fontSize: '15px', color: 'var(--text-muted)' }}>Enter your order ID below to get real-time delivery status.</p>
+          <p style={{ fontSize: '15px', color: 'var(--text-muted)' }}>Enter your order ID or tracking number below to get real-time delivery status.</p>
         </div>
       </section>
 
@@ -163,9 +179,9 @@ export default function TrackPage() {
         <div className="container">
           <div className="track-search-card">
             <h2>Enter Order Details</h2>
-            <p>Find your order ID in the confirmation email or your account dashboard.</p>
+            <p>Find your order ID or tracking number in the confirmation email or your account dashboard.</p>
             <form className="track-form" onSubmit={trackOrder}>
-              <input className="track-input" type="text" id="order-input" placeholder="e.g. CF-20845" value={orderId} onChange={e => setOrderId(e.target.value)} />
+              <input className="track-input" type="text" id="order-input" placeholder="e.g. CF-20845 or TRK-10293847" value={orderId} onChange={e => setOrderId(e.target.value)} />
               <button className="btn-track-submit" type="submit" disabled={loading}>{loading ? 'Tracking…' : 'Track Order'}</button>
             </form>
           </div>
@@ -176,6 +192,9 @@ export default function TrackPage() {
                 <div className="track-order-meta">
                   <div>
                     <p className="track-order-id">#{orderData.order_number}</p>
+                    {orderData.tracking_number && (
+                      <p className="track-tracking-id">Tracking #: {orderData.tracking_number}</p>
+                    )}
                     <p className="track-order-date">Placed on {formatDate(orderData.created_at)} · {orderData.total_amount}</p>
                   </div>
                   <span className={`track-status-badge ${orderData.status.toLowerCase()}`}>
@@ -218,5 +237,13 @@ export default function TrackPage() {
         </div>
       </section>
     </main>
+  );
+}
+
+export default function TrackPage() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Loading...</div>}>
+      <TrackContent />
+    </Suspense>
   );
 }

@@ -15,58 +15,56 @@ export default function Header() {
   const isCheckout = pathname === '/checkout';
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    setIsLoggedIn(!!token);
-    
-    if (token) {
-      fetchCustomerAuth('/cart')
-        .then(res => res.json())
-        .then(data => {
-          if (data.cart) {
-            setCartCount(data.cart.length);
-          }
-        })
-        .catch(() => setCartCount(0));
-
-      fetchCustomerAuth('/wishlist')
-        .then(res => res.json())
-        .then(data => {
-          if (data.products) {
-            setWishlistCount(data.products.length);
-          }
-        })
-        .catch(() => setWishlistCount(0));
-    } else {
-      setCartCount(0);
-      setWishlistCount(0);
-    }
-
-    const handleCartUpdate = () => {
+    const refreshCounts = () => {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      setIsLoggedIn(!!token);
+      
       if (token) {
         fetchCustomerAuth('/cart')
           .then(res => res.json())
           .then(data => {
-            if (data.cart) setCartCount(data.cart.length);
-          });
-      }
-    };
-    
-    const handleWishlistUpdate = () => {
-      if (token) {
+            if (data.cart) {
+              setCartCount(data.cart.length);
+            } else {
+              setCartCount(0);
+            }
+          })
+          .catch(() => setCartCount(0));
+
         fetchCustomerAuth('/wishlist')
           .then(res => res.json())
           .then(data => {
-            if (data.products) setWishlistCount(data.products.length);
-          });
+            if (data.products) {
+              setWishlistCount(data.products.length);
+            } else {
+              setWishlistCount(0);
+            }
+          })
+          .catch(() => setWishlistCount(0));
+      } else {
+        setCartCount(0);
+        setWishlistCount(0);
       }
+    };
+
+    refreshCounts();
+
+    const handleCartUpdate = () => {
+      refreshCounts();
+    };
+    
+    const handleWishlistUpdate = () => {
+      refreshCounts();
     };
 
     window.addEventListener('cart_updated', handleCartUpdate);
     window.addEventListener('wishlist_updated', handleWishlistUpdate);
+    window.addEventListener('storage', refreshCounts);
     
     return () => {
       window.removeEventListener('cart_updated', handleCartUpdate);
       window.removeEventListener('wishlist_updated', handleWishlistUpdate);
+      window.removeEventListener('storage', refreshCounts);
     };
   }, [pathname]);
 

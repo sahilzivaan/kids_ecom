@@ -40,15 +40,20 @@ class CouponController extends ResourceController
             return $this->respond(['valid' => false, 'error' => 'This coupon has expired.']);
         }
 
+        if (!empty($coupon->max_uses) && (int)$coupon->usage_count >= (int)$coupon->max_uses) {
+            return $this->respond(['valid' => false, 'error' => 'This coupon has reached its maximum usage limit.']);
+        }
+
         if ($orderAmount > 0 && $orderAmount < (float)$coupon->min_order) {
             return $this->respond(['valid' => false, 'error' => 'Minimum order amount for this coupon is ₹' . $coupon->min_order]);
         }
 
         return $this->respond([
-            'valid' => true,
-            'code'  => $coupon->code,
-            'type'  => $coupon->type,
-            'value' => (float)$coupon->value
+            'valid'       => true,
+            'code'        => $coupon->code,
+            'type'        => $coupon->type,
+            'value'       => (float)$coupon->value,
+            'description' => $coupon->description ?? ''
         ]);
     }
 }

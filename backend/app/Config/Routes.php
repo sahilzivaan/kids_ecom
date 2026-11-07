@@ -16,14 +16,13 @@ $routes->group('api/auth', ['namespace' => 'App\Controllers\Api'], static functi
 
 // Public API Routes (No JWT required)
 $routes->group('api', ['namespace' => 'App\Controllers\Api'], static function ($routes) {
-    $routes->options('products', static function() { return service('response')->setStatusCode(204); });
+    $routes->options('(:any)', static function() { return service('response')->setStatusCode(204); });
     $routes->get('products', 'ProductController::index');
     $routes->get('products/(:num)', 'ProductController::show/$1');
-    $routes->options('categories', static function() { return service('response')->setStatusCode(204); });
     $routes->get('categories', 'CategoryController::index');
-    
-    $routes->options('reviews', static function() { return service('response')->setStatusCode(204); });
     $routes->get('reviews', 'ReviewController::index');
+    $routes->get('track/(:segment)', 'OrderController::track/$1');
+    $routes->post('coupons/validate', 'CouponController::validateCoupon');
 });
 
 
@@ -38,6 +37,7 @@ $routes->group('api', ['filter' => 'custom_jwt', 'namespace' => 'App\Controllers
     // Cart Routes
     $routes->get('cart', 'CartController::index');
     $routes->post('cart', 'CartController::create');
+    $routes->put('cart/(:num)', 'CartController::update/$1');
     $routes->delete('cart/(:num)', 'CartController::delete/$1');
 
     // Wishlist Routes
@@ -50,10 +50,6 @@ $routes->group('api', ['filter' => 'custom_jwt', 'namespace' => 'App\Controllers
     // Order Routes
     $routes->get('orders', 'OrderController::index');
     $routes->post('orders', 'OrderController::create');
-    $routes->get('track/(:segment)', 'OrderController::track/$1');
-    
-    // Coupon Routes
-    $routes->post('coupons/validate', 'CouponController::validateCoupon');
 
 
     // Admin Notifications

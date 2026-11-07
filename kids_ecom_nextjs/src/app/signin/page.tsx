@@ -20,8 +20,24 @@ function SignInContent() {
   const [msg, setMsg] = useState('');
   const [isRedirecting, setIsRedirecting] = useState(false);
 
+  const extractError = (data: any, defaultMsg: string) => {
+    if (!data) return defaultMsg;
+    if (data.messages) {
+      if (typeof data.messages === 'string') return data.messages;
+      if (typeof data.messages === 'object') {
+        if (data.messages.error) return data.messages.error;
+        const vals = Object.values(data.messages).filter(Boolean);
+        if (vals.length > 0) return vals.join(' ');
+      }
+    }
+    if (typeof data.error === 'string') return data.error;
+    if (data.message && typeof data.message === 'string') return data.message;
+    return defaultMsg;
+  };
+
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
+    setMsg('');
     try {
       const res = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
@@ -30,14 +46,15 @@ function SignInContent() {
       });
       const data = await res.json();
       if (!res.ok) {
-        const errMsg = data.messages?.error || (typeof data.error === 'string' ? data.error : null) || 'Login failed. Please check your credentials.';
-        setMsg(errMsg);
+        setMsg(extractError(data, 'Login failed. Please check your credentials.'));
         return;
       }
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
+      window.dispatchEvent(new Event('cart_updated'));
+      window.dispatchEvent(new Event('wishlist_updated'));
       setIsRedirecting(true);
-      setTimeout(() => { window.location.href = '/account'; }, 1500);
+      setTimeout(() => { window.location.href = redirectUrl; }, 1200);
     } catch (err) {
       setMsg('An error occurred during login. Please try again later.');
     }
@@ -45,6 +62,7 @@ function SignInContent() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    setMsg('');
     try {
       const res = await fetch(`${API_BASE_URL}/auth/register`, {
         method: 'POST',
@@ -59,14 +77,15 @@ function SignInContent() {
       });
       const data = await res.json();
       if (!res.ok) {
-        const errMsg = data.messages?.error || (typeof data.error === 'string' ? data.error : null) || 'Registration failed.';
-        setMsg(errMsg);
+        setMsg(extractError(data, 'Registration failed. Please check all required fields.'));
         return;
       }
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
+      window.dispatchEvent(new Event('cart_updated'));
+      window.dispatchEvent(new Event('wishlist_updated'));
       setIsRedirecting(true);
-      setTimeout(() => { window.location.href = '/account'; }, 1500);
+      setTimeout(() => { window.location.href = redirectUrl; }, 1200);
     } catch (err) {
       setMsg('An error occurred during registration. Please try again later.');
     }

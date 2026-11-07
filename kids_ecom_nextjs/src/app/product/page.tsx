@@ -199,6 +199,16 @@ function ProductContent() {
       return;
     }
 
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    if (!token) {
+      toast.error('Please sign in to add items to your cart');
+      const currentUrl = typeof window !== 'undefined' ? window.location.pathname + window.location.search : '/shop';
+      setTimeout(() => {
+        window.location.href = `/signin?redirect=${encodeURIComponent(currentUrl)}`;
+      }, 900);
+      return;
+    }
+
     let variantId = null;
     let variantImg = '';
     if (currentVariant) {
@@ -241,6 +251,65 @@ function ProductContent() {
         }
       })
       .catch(() => toast.error('Please login to add to cart'));
+  };
+
+  const handleBuyNow = async () => {
+    if (sizes.length > 0 && !selectedSize) {
+      toast.error('Please select a size before proceeding');
+      return;
+    }
+
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    if (!token) {
+      toast.error('Please sign in to complete your purchase');
+      const currentUrl = typeof window !== 'undefined' ? window.location.pathname + window.location.search : '/shop';
+      setTimeout(() => {
+        window.location.href = `/signin?redirect=${encodeURIComponent(currentUrl)}`;
+      }, 900);
+      return;
+    }
+
+    let variantId = null;
+    let variantImg = '';
+    if (currentVariant) {
+      variantId = currentVariant.id;
+      if (currentVariant.image_url) variantImg = currentVariant.image_url;
+    } else {
+      const v = variants.find((varObj: any) => varObj.color === selectedColor && varObj.size === selectedSize);
+      if (v) {
+        variantId = v.id;
+        if (v.image_url) variantImg = v.image_url;
+      }
+    }
+
+    const rawImg = (product?.images && product.images.length > 0)
+      ? (product.images.find((i: any) => i.is_primary)?.image_url || product.images[0].image_url)
+      : (product?.img || '');
+    const finalImg = variantImg || rawImg;
+
+    try {
+      const res = await fetchCustomerAuth('/cart', {
+        method: 'POST',
+        body: JSON.stringify({
+          product_id: product.id,
+          name: product.name,
+          meta: selectedColor && selectedSize ? `${selectedColor} / ${selectedSize}` : (selectedSize || selectedColor || 'One Size'),
+          price: String(displayPrice),
+          img: getImageUrl(finalImg, 'thumb'),
+          quantity: qty,
+          variant_id: variantId,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        window.dispatchEvent(new Event('cart_updated'));
+        window.location.href = '/checkout';
+      } else {
+        toast.error(data.error || 'Failed to add to cart for checkout');
+      }
+    } catch {
+      toast.error('Could not proceed to checkout. Please try again.');
+    }
   };
 
   const checkDelivery = (e: React.FormEvent) => {
@@ -505,7 +574,7 @@ function ProductContent() {
                     </button>
                   </div>
                   {inStock && (
-                    <button className="btn-buy" style={{ marginTop: '12px' }} onClick={() => (window.location.href = '/checkout')}>
+                    <button className="btn-buy" style={{ marginTop: '12px' }} onClick={handleBuyNow}>
                       Buy Now
                     </button>
                   )}
