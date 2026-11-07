@@ -47,13 +47,20 @@
 
 /* ── Reset ──────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; font-size: 16px; }
+html {
+  scroll-behavior: smooth;
+  font-size: 16px;
+  overflow-x: hidden;
+  max-width: 100%;
+}
 body {
   font-family: var(--font-sans);
   background: var(--bg);
   color: var(--text-body);
   line-height: 1.65;
   overflow-x: hidden;
+  max-width: 100%;
+  position: relative;
   -webkit-font-smoothing: antialiased;
 }
 img { max-width: 100%; display: block; height: auto; }
@@ -1050,9 +1057,11 @@ footer { background: var(--text-heading); color: rgba(255,255,255,0.7); padding:
   .search-bar { display: none; }
   .hamburger  { display: flex; }
   .mobile-nav-drawer { display: flex; }
-  .navbar { gap: 16px; }
+  .navbar { gap: 16px; justify-content: space-between; }
   .btn-signin { display: none; }
   .btn-logout { display: none; }
+  #btn-wishlist,
+  #btn-account { display: none; }
   .mobile-search { display: flex; }
 
   .hero-inner { grid-template-columns: 1fr; }

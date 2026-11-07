@@ -132,10 +132,14 @@ function ProductContent() {
     return Array.from(new Set(variants.map((v: any) => v.color).filter(Boolean)));
   }, [variants]);
 
+  // Active color with fallback for instant first-render matching
+  const activeColor = selectedColor || (availableColors.length > 0 ? (availableColors[0] as string) : '');
+
   // Auto-initialize color selection and reset states when product changes
   useEffect(() => {
-    if (availableColors.length > 0) {
-      setSelectedColor(availableColors[0] as string);
+    const cols = Array.from(new Set((product?.variants || []).map((v: any) => v.color).filter(Boolean))) as string[];
+    if (cols.length > 0) {
+      setSelectedColor(cols[0]);
     } else {
       setSelectedColor('');
     }
@@ -143,29 +147,41 @@ function ProductContent() {
     setActiveImg(0);
     setQty(1);
     setDeliveryInfo('');
-  }, [availableColors, product?.id]);
+  }, [product?.id]);
 
-  // Available sizes based on selected color
+  // Available sizes based on active color
   const availableSizes = useMemo(() => {
-    if (availableColors.length > 0 && selectedColor) {
+    const colorToMatch = selectedColor || activeColor;
+    if (availableColors.length > 0 && colorToMatch) {
       return variants
-        .filter((v: any) => v.color === selectedColor && v.size)
-        .map((v: any) => ({ size: v.size, stock: Number(v.stock || 0) }));
+        .filter((v: any) => v.color === colorToMatch && v.size)
+        .map((v: any) => ({ size: String(v.size).trim(), stock: Number(v.stock || 0) }));
     }
     return variants
       .filter((v: any) => v.size)
-      .map((v: any) => ({ size: v.size, stock: Number(v.stock || 0) }));
-  }, [variants, availableColors, selectedColor]);
+      .map((v: any) => ({ size: String(v.size).trim(), stock: Number(v.stock || 0) }));
+  }, [variants, availableColors, selectedColor, activeColor]);
 
-  // Fallback to product sizes string if no structured variants exist
+  // Fallback to product sizes string if no structured variants exist, with strict deduplication
   const sizes = useMemo(() => {
-    if (availableSizes.length > 0) return availableSizes;
-    if (product?.sizes) {
-      return product.sizes
-        .split(',')
-        .map((s: string) => ({ size: s.trim(), stock: Number(product.stock || 0) }));
-    }
-    return [];
+    const rawList = availableSizes.length > 0
+      ? availableSizes
+      : (product?.sizes
+          ? String(product.sizes).split(',').map((s: string) => ({ size: s.trim(), stock: Number(product.stock || 0) }))
+          : []);
+
+    const uniqueMap = new Map<string, { size: string; stock: number }>();
+    rawList.forEach((item: any) => {
+      const trimmedSize = item?.size?.trim();
+      if (!trimmedSize) return;
+      if (!uniqueMap.has(trimmedSize)) {
+        uniqueMap.set(trimmedSize, { size: trimmedSize, stock: Number(item.stock || 0) });
+      } else {
+        const existing = uniqueMap.get(trimmedSize)!;
+        existing.stock = Math.max(existing.stock, Number(item.stock || 0));
+      }
+    });
+    return Array.from(uniqueMap.values());
   }, [availableSizes, product]);
 
   // Current active variant based on selection
@@ -324,26 +340,94 @@ function ProductContent() {
   return (
     <main id="main-content">
       <style>{`
-        .product-page { padding-top: 40px; padding-bottom: 80px; background: var(--bg); }
-        .breadcrumb { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-muted); margin-bottom: 32px; flex-wrap: wrap; }
+        .product-page { padding-top: 32px; padding-bottom: 80px; background: var(--bg); }
+        .breadcrumb { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-muted); margin-bottom: 24px; flex-wrap: wrap; }
         .breadcrumb a { color: var(--text-muted); text-decoration: none; transition: color .2s; }
         .breadcrumb a:hover { color: var(--primary); }
-        .product-page-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: start; }
-        .product-gallery { display: grid; grid-template-columns: 80px 1fr; gap: 16px; align-items: start; }
-        .gallery-thumbnails { display: flex; flex-direction: column; gap: 10px; max-height: 520px; overflow-y: auto; scrollbar-width: none; }
+        
+        .product-page-layout { 
+          display: grid; 
+          grid-template-columns: 1fr 1fr; 
+          gap: 40px; 
+          align-items: start; 
+          width: 100%;
+        }
+
+        .product-gallery { 
+          display: grid; 
+          grid-template-columns: 80px 1fr; 
+          gap: 16px; 
+          align-items: start;
+          min-width: 0;
+          width: 100%;
+        }
+        .gallery-thumbnails { 
+          display: flex; 
+          flex-direction: column; 
+          gap: 10px; 
+          max-height: 520px; 
+          overflow-y: auto; 
+          scrollbar-width: none; 
+        }
         .gallery-thumbnails::-webkit-scrollbar { display: none; }
-        .thumbnail-btn { width: 80px; height: 100px; border-radius: var(--radius-sm); border: 2px solid var(--border); overflow: hidden; background: #fff; cursor: pointer; padding: 0; transition: border-color .2s; }
+        .thumbnail-btn { 
+          width: 80px; 
+          height: 100px; 
+          border-radius: var(--radius-sm); 
+          border: 2px solid var(--border); 
+          overflow: hidden; 
+          background: #fff; 
+          cursor: pointer; 
+          padding: 0; 
+          transition: border-color .2s;
+          flex-shrink: 0;
+        }
         .thumbnail-btn.active { border-color: var(--primary); }
-        .gallery-main { position: relative; width: 100%; aspect-ratio: 4/5; background: #fff; border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--border); }
+        .gallery-main { 
+          position: relative; 
+          width: 100%; 
+          aspect-ratio: 4/5; 
+          background: #fff; 
+          border-radius: var(--radius-md); 
+          overflow: hidden; 
+          border: 1px solid var(--border);
+          min-width: 0;
+        }
         .gallery-badge { position: absolute; top: 16px; left: 16px; z-index: 2; }
-        .product-info { display: flex; flex-direction: column; gap: 20px; }
+        
+        .product-info { 
+          display: flex; 
+          flex-direction: column; 
+          gap: 20px; 
+          min-width: 0;
+          width: 100%;
+        }
         .product-brand-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: var(--bg-subtle); border-radius: var(--radius-full); font-size: 12px; font-weight: 600; color: var(--text-heading); text-transform: uppercase; width: fit-content; }
-        .product-title { font-family: var(--font-serif); font-size: 32px; font-weight: 700; color: var(--text-heading); margin: 0; line-height: 1.25; }
-        .product-rating-row { display: flex; align-items: center; gap: 10px; }
-        .product-price-row { display: flex; align-items: baseline; gap: 12px; padding: 16px 20px; background: var(--bg-subtle); border-radius: var(--radius-md); width: fit-content; }
-        .product-price-now { font-size: 30px; font-weight: 800; color: var(--primary); }
-        .product-price-old { font-size: 18px; color: var(--text-light); text-decoration: line-through; }
-        .product-price-save { font-size: 14px; font-weight: 700; color: #27AE60; }
+        .product-title { 
+          font-family: var(--font-serif); 
+          font-size: clamp(22px, 4vw, 34px); 
+          font-weight: 700; 
+          color: var(--text-heading); 
+          margin: 0; 
+          line-height: 1.25; 
+          word-break: break-word;
+          overflow-wrap: break-word;
+        }
+        .product-rating-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .product-price-row { 
+          display: flex; 
+          align-items: baseline; 
+          gap: 12px; 
+          padding: 14px 20px; 
+          background: var(--bg-subtle); 
+          border-radius: var(--radius-md); 
+          width: fit-content; 
+          max-width: 100%;
+          flex-wrap: wrap;
+        }
+        .product-price-now { font-size: 28px; font-weight: 800; color: var(--primary); }
+        .product-price-old { font-size: 17px; color: var(--text-light); text-decoration: line-through; }
+        .product-price-save { font-size: 13.5px; font-weight: 700; color: #27AE60; }
         .tax-note { font-size: 12px; color: var(--text-muted); margin: 4px 0 0 2px; }
         .size-section h4 { font-size: 14px; font-weight: 700; color: var(--text-heading); margin: 0 0 12px; display: flex; justify-content: space-between; align-items: center; }
         .size-guide-link { background: none; border: none; color: var(--primary); font-size: 13px; font-weight: 600; cursor: pointer; text-decoration: underline; padding: 0; }
@@ -352,8 +436,8 @@ function ProductContent() {
         .size-btn:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); }
         .size-btn.active { border-color: var(--primary); background: var(--primary); color: #fff; }
         .size-btn.oos { opacity: 0.45; cursor: not-allowed; text-decoration: line-through; background: var(--bg-subtle); }
-        .add-to-cart-row { display: flex; gap: 14px; align-items: center; }
-        .qty-wrap { display: flex; align-items: center; border: 1px solid var(--border); border-radius: var(--radius-sm); background: #fff; height: 50px; }
+        .add-to-cart-row { display: flex; gap: 14px; align-items: center; width: 100%; }
+        .qty-wrap { display: flex; align-items: center; border: 1px solid var(--border); border-radius: var(--radius-sm); background: #fff; height: 50px; flex-shrink: 0; }
         .qty-btn2 { width: 44px; height: 100%; border: none; background: none; font-size: 18px; font-weight: 700; color: var(--text-heading); cursor: pointer; display: flex; align-items: center; justify-content: center; }
         .qty-btn2:hover { background: var(--bg-subtle); }
         .qty-num2 { width: 40px; border: none; text-align: center; font-size: 15px; font-weight: 700; color: var(--text-heading); background: transparent; }
@@ -362,23 +446,35 @@ function ProductContent() {
         .btn-atc.added { background: #27AE60; }
         .btn-buy { width: 100%; height: 48px; border-radius: var(--radius-sm); border: 2px solid var(--primary); background: transparent; color: var(--primary); font-size: 15px; font-weight: 700; cursor: pointer; transition: all .2s; }
         .btn-buy:hover { background: var(--primary); color: #fff; }
-        .product-meta-pills { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .product-meta-pills { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; }
         .meta-pill { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: var(--text-heading); background: #fff; border: 1px solid var(--border); padding: 8px 12px; border-radius: var(--radius-sm); }
         .meta-pill svg { width: 16px; height: 16px; color: #27AE60; flex-shrink: 0; }
-        .delivery-form { display: flex; gap: 10px; margin-top: 10px; }
-        .delivery-input { flex: 1; height: 42px; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0 14px; font-size: 14px; outline: none; }
+        .delivery-form { display: flex; gap: 10px; margin-top: 10px; width: 100%; }
+        .delivery-input { flex: 1; min-width: 0; height: 42px; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0 14px; font-size: 14px; outline: none; }
         .delivery-input:focus { border-color: var(--primary); }
-        .btn-check { height: 42px; padding: 0 20px; border-radius: var(--radius-sm); border: none; background: var(--text-heading); color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; }
+        .btn-check { height: 42px; padding: 0 20px; border-radius: var(--radius-sm); border: none; background: var(--text-heading); color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; flex-shrink: 0; }
         .delivery-result { font-size: 13px; font-weight: 600; color: #27AE60; margin-top: 8px; }
 
         @media (max-width: 900px) {
-          .product-page-layout { grid-template-columns: 1fr; gap: 32px; }
+          .product-page-layout { grid-template-columns: 1fr; gap: 28px; }
         }
         @media (max-width: 680px) {
-          .product-gallery { grid-template-columns: 1fr; }
-          .gallery-thumbnails { flex-direction: row; overflow-x: auto; order: 2; }
-          .gallery-main { order: 1; }
-          .thumbnail-btn { width: 64px; height: 80px; flex-shrink: 0; }
+          .product-gallery { display: flex; flex-direction: column; width: 100%; }
+          .gallery-thumbnails { flex-direction: row; overflow-x: auto; order: 2; width: 100%; padding-bottom: 6px; gap: 8px; }
+          .gallery-main { order: 1; width: 100%; max-height: 480px; }
+          .thumbnail-btn { width: 64px; height: 76px; flex-shrink: 0; }
+          .product-meta-pills { grid-template-columns: 1fr; }
+          .product-price-row { width: 100%; }
+        }
+        @media (max-width: 480px) {
+          .product-page { padding-top: 18px; padding-bottom: 60px; }
+          .product-title { font-size: 21px; }
+          .product-price-now { font-size: 24px; }
+          .add-to-cart-row { flex-direction: column; align-items: stretch; gap: 10px; }
+          .qty-wrap { width: 100%; justify-content: center; }
+          .btn-atc { width: 100%; }
+          .delivery-form { flex-direction: column; }
+          .btn-check { width: 100%; }
         }
       `}</style>
 
@@ -503,17 +599,17 @@ function ProductContent() {
                 {/* Color Selection */}
                 {availableColors.length > 0 && (
                   <div className="size-section">
-                    <h4>Color: <span style={{ color: 'var(--primary)', fontWeight: 600 }}>{selectedColor}</span></h4>
+                    <h4>Color: <span style={{ color: 'var(--primary)', fontWeight: 600 }}>{selectedColor || activeColor}</span></h4>
                     <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                      {availableColors.map((c: any) => (
+                      {availableColors.map((c: any, idx: number) => (
                         <button
-                          key={c}
+                          key={`color-${c}-${idx}`}
                           style={{
                             padding: '8px 16px',
                             borderRadius: 'var(--radius-sm)',
-                            border: selectedColor === c ? '2px solid var(--primary)' : '1px solid var(--border)',
-                            background: selectedColor === c ? 'rgba(212,82,42,0.08)' : '#fff',
-                            color: selectedColor === c ? 'var(--primary)' : 'var(--text-heading)',
+                            border: (selectedColor || activeColor) === c ? '2px solid var(--primary)' : '1px solid var(--border)',
+                            background: (selectedColor || activeColor) === c ? 'rgba(212,82,42,0.08)' : '#fff',
+                            color: (selectedColor || activeColor) === c ? 'var(--primary)' : 'var(--text-heading)',
                             cursor: 'pointer',
                             fontWeight: 600,
                             fontSize: '13px',
@@ -538,9 +634,9 @@ function ProductContent() {
                       </button>
                     </h4>
                     <div className="size-options">
-                      {sizes.map((sObj: any) => (
+                      {sizes.map((sObj: any, idx: number) => (
                         <button
-                          key={sObj.size}
+                          key={`size-${sObj.size}-${idx}`}
                           className={`size-btn${selectedSize === sObj.size ? ' active' : ''}${sObj.stock <= 0 ? ' oos' : ''}`}
                           onClick={() => sObj.stock > 0 && setSelectedSize(sObj.size)}
                           disabled={sObj.stock <= 0}
@@ -646,7 +742,7 @@ function ProductContent() {
                     View All {product.category} →
                   </Link>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '20px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '16px' }}>
                   {relatedProducts.map((rp: any) => {
                     const rpImg = (rp.images && rp.images.length > 0)
                       ? (rp.images.find((i: any) => i.is_primary)?.image_url || rp.images[0].image_url)
