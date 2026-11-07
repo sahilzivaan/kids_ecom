@@ -361,8 +361,9 @@ function ProductContent() {
           min-width: 0;
           width: 100%;
           position: sticky;
-          top: 90px;
+          top: 96px;
           align-self: start;
+          z-index: 10;
         }
         .product-gallery.no-thumbs {
           grid-template-columns: 1fr;
