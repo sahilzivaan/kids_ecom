@@ -37,8 +37,9 @@ class AdminCustomerController extends ResourceController
                 $statsMap[$uid] = ['total_orders' => 0, 'total_spent' => 0];
             }
             $statsMap[$uid]['total_orders']++;
-            $amtStr = preg_replace('/[^0-9]/', '', $o['total_amount']);
-            $statsMap[$uid]['total_spent'] += (int)$amtStr;
+            $clean = str_replace(',', '', (string)$o['total_amount']);
+            $clean = preg_replace('/[^\d.]/', '', $clean);
+            $statsMap[$uid]['total_spent'] += (float)$clean;
         }
 
         // Fetch latest city for each user

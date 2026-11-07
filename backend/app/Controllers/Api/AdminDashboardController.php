@@ -16,11 +16,20 @@ class AdminDashboardController extends ResourceController
         $this->db = \Config\Database::connect();
     }
 
+    private function parseAmount($value): float
+    {
+        if (empty($value)) {
+            return 0.0;
+        }
+        $clean = str_replace(',', '', (string)$value);
+        $clean = preg_replace('/[^\d.]/', '', $clean);
+        return (float)$clean;
+    }
+
     public function dashboard()
     {
-        // Total Revenue (parsing VARCHAR total_amount like '₹2,203')
         $orders = $this->db->table('orders')->get()->getResultArray();
-        $totalRevenue = 0;
+        $totalRevenue = 0.0;
         $ordersToday = 0;
         $pendingShipments = 0;
         $todayStr = date('Y-m-d');
@@ -28,19 +37,32 @@ class AdminDashboardController extends ResourceController
         // Status counts: Delivered, Shipped, Processing, Pending, Cancelled
         $statusCounts = ['Delivered' => 0, 'Shipped' => 0, 'Processing' => 0, 'Pending' => 0, 'Cancelled' => 0];
 
+        // Financial Year 12 months map: Jul=0 to Jun=11
+        $monthIndexMap = [
+            7 => 0, 8 => 1, 9 => 2, 10 => 3, 11 => 4, 12 => 5,
+            1 => 6, 2 => 7, 3 => 8, 4 => 9, 5 => 10, 6 => 11
+        ];
+        $revenueData = array_fill(0, 12, 0.0);
+
         foreach ($orders as $o) {
-            // Parse amount
-            $amtStr = preg_replace('/[^0-9]/', '', $o['total_amount']);
-            $amt = (int)$amtStr;
+            $amt = $this->parseAmount($o['total_amount'] ?? '');
             $totalRevenue += $amt;
 
-            // Date
-            if (strpos($o['created_at'], $todayStr) === 0) {
+            // Monthly distribution
+            if (!empty($o['created_at'])) {
+                $month = (int)date('n', strtotime($o['created_at']));
+                if (isset($monthIndexMap[$month])) {
+                    $revenueData[$monthIndexMap[$month]] += $amt;
+                }
+            }
+
+            // Today's orders
+            if (!empty($o['created_at']) && strpos($o['created_at'], $todayStr) === 0) {
                 $ordersToday++;
             }
 
             // Status
-            $st = $o['status'];
+            $st = $o['status'] ?? 'Pending';
             if (isset($statusCounts[$st])) {
                 $statusCounts[$st]++;
             }
@@ -56,7 +78,7 @@ class AdminDashboardController extends ResourceController
         $kpis = [
             [
                 'label'  => 'Total Revenue',
-                'value'  => '₹' . number_format($totalRevenue),
+                'value'  => '₹' . number_format($totalRevenue, 0),
                 'change' => '12%',
                 'dir'    => 'up',
                 'icon'   => '💰',
@@ -100,14 +122,15 @@ class AdminDashboardController extends ResourceController
         foreach ($recentOrdersRaw as $ro) {
             $name = trim(($ro['first_name'] ?? '') . ' ' . ($ro['last_name'] ?? ''));
             if (!$name) $name = $ro['username'] ?? 'Guest';
+            $amt = $this->parseAmount($ro['total_amount'] ?? '');
             $recentOrders[] = [
-                'id'         => $ro['order_number'],
+                'id'         => $ro['order_number'] ?? ('#' . $ro['id']),
                 'customer'   => $name,
-                'items'      => (int)$ro['items_count'],
-                'amount'     => $ro['total_amount'],
-                'amount_num' => (int)preg_replace('/[^0-9]/', '', $ro['total_amount']),
-                'status'     => $ro['status'],
-                'date'       => date('d M Y', strtotime($ro['created_at']))
+                'items'      => (int)($ro['items_count'] ?? 1),
+                'amount'     => '₹' . number_format($amt, 0),
+                'amount_num' => round($amt, 2),
+                'status'     => $ro['status'] ?? 'Pending',
+                'date'       => !empty($ro['created_at']) ? date('d M Y', strtotime($ro['created_at'])) : '-'
             ];
         }
 
@@ -131,8 +154,7 @@ class AdminDashboardController extends ResourceController
                         }
                         
                         $qty = (int)($item['quantity'] ?? 1);
-                        $priceStr = $item['price'] ?? '0';
-                        $price = (float)preg_replace('/[^0-9.]/', '', $priceStr);
+                        $price = $this->parseAmount($item['price'] ?? 0);
                         
                         $productSales[$id]['sold'] += $qty;
                         $productSales[$id]['revenue'] += ($qty * $price);
@@ -161,9 +183,6 @@ class AdminDashboardController extends ResourceController
                 'revenue'  => $ts['revenue']
             ];
         }
-
-        // Revenue Data (real data only)
-        $revenueData = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, $totalRevenue];
         
         // Status Data ['Delivered','Shipped','Processing','Pending','Cancelled']
         $statusData = [
@@ -186,20 +205,36 @@ class AdminDashboardController extends ResourceController
     public function analytics()
     {
         $orders = $this->db->table('orders')->get()->getResultArray();
-        $totalRevenue = 0;
+        $totalRevenue = 0.0;
+
+        $monthIndexMap = [
+            7 => 0, 8 => 1, 9 => 2, 10 => 3, 11 => 4, 12 => 5,
+            1 => 6, 2 => 7, 3 => 8, 4 => 9, 5 => 10, 6 => 11
+        ];
+        $revenueData = array_fill(0, 12, 0.0);
+        $ordersData  = array_fill(0, 12, 0);
+
         foreach ($orders as $o) {
-            $amt = (int)preg_replace('/[^0-9]/', '', $o['total_amount']);
+            $amt = $this->parseAmount($o['total_amount'] ?? '');
             $totalRevenue += $amt;
+
+            if (!empty($o['created_at'])) {
+                $month = (int)date('n', strtotime($o['created_at']));
+                if (isset($monthIndexMap[$month])) {
+                    $idx = $monthIndexMap[$month];
+                    $revenueData[$idx] += $amt;
+                    $ordersData[$idx]++;
+                }
+            }
         }
 
-        // Real data only
-        $revenueData = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, $totalRevenue];
-        $ordersData = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, count($orders)];
-        
+        $orderCount = count($orders);
+        $avgOrder = $orderCount > 0 ? (int)round($totalRevenue / $orderCount) : 0;
+
         $metrics = [
-            'totalRevenue' => $totalRevenue,
-            'revChange'    => 18.5,
-            'avgOrder'     => count($orders) > 0 ? (int)($totalRevenue / count($orders)) : 1850,
+            'totalRevenue' => round($totalRevenue, 2),
+            'revChange'    => 12.0,
+            'avgOrder'     => $avgOrder,
             'aovChange'    => 4.2,
             'conversion'   => 3.8,
             'convChange'   => 0.4
